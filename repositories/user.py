@@ -1,14 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from uuid import uuid4
 from models.user import User
 
 class UserRepository:
-  def __int__(self,session:AsyncSession):
+  def __init__(self,session:AsyncSession):
     self.session=session
 
   async def create_user(self,name:str,email:str)->User:
     user=User(
+      id=str(uuid4()),
       name=name,
       email=email
     )

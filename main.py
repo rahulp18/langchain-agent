@@ -1,24 +1,33 @@
 from fastapi import FastAPI
 from api.chat import router as chat_router
+from api.conversation import router as conversation_router
+from api.user import router as user_router
 from contextlib import asynccontextmanager
 from database.postgres import PostgresManager
 from agents.service import AgentService
+from core.config import get_settings
  
-postgres=PostgresManager()
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
+
+  settings=get_settings()
+ 
+  postgres=PostgresManager(settings)
   await postgres.startup()
 
   app.state.postgres=postgres
-  print("Application startup complete")
+  app.state.settings=settings
   app.state.agent_service=AgentService(
+    settings,
     checkpointer=postgres.checkpointer
   )
-  yield
+  try:
+    yield
+  finally:
+    await postgres.shutdown()
 
-  await postgres.shutdown()
-  print("Application shutdown complete")
+ 
 
 app=FastAPI(
   title="Single Agent API",
@@ -27,6 +36,8 @@ app=FastAPI(
 )
 
 app.include_router(chat_router)
+app.include_router(conversation_router)
+app.include_router(user_router)
 
 @app.get('/health')
 def health():

@@ -1,13 +1,15 @@
-import os
-from dotenv import load_dotenv
+ 
+ 
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
-from tools.weather import search_weather
+from tools.weather import build_weather_tool
 from langchain.agents.middleware import wrap_tool_call
 from langchain_core.messages import ToolMessage
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+ 
 from sqlalchemy.ext.asyncio import AsyncSession
-load_dotenv()
+from core.config import Settings
+from langgraph.checkpoint.base import BaseCheckpointSaver
+ 
 
  
 
@@ -24,14 +26,14 @@ async def handle_tool_errors(request,handler):
 
 
 class AgentService:
-  def __init__(self,checkpointer):
+  def __init__(self,settings:Settings,checkpointer:BaseCheckpointSaver):
     self.llm=ChatGroq(
-      api_key=os.getenv("GROQ_API_KEY"),
-      model="openai/gpt-oss-120b",
+      api_key=settings.groq_api_key.get_secret_value(),
+      model=settings.llm_model,
     )
     self.agent=create_agent(
       model=self.llm,
-      tools=[search_weather],
+      tools=[build_weather_tool(settings)],
       middleware=[
         handle_tool_errors
       ],
@@ -40,7 +42,7 @@ class AgentService:
       ),
       checkpointer=checkpointer
     )
-  async def chat(self,message:str,thread_id:str,session:AsyncSession)->str:
+  async def chat(self,message:str,thread_id:str)->str:
     response=await self.agent.ainvoke({
       'messages':[
         {

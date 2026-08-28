@@ -11,6 +11,7 @@ class Conversation(Base):
   id:Mapped[int]=mapped_column(
     primary_key=True
   )
+  title:Mapped[str|None]=mapped_column()
   user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
         nullable=False,
@@ -35,8 +36,11 @@ class CreateConversationResponse(BaseModel):
 
 class ChatRequest(BaseModel):
   conversation_id:int
+  user_id:str
   message:str
 
 class ChatResponse(BaseModel):
   message:str
 
+class ConversationRequest(BaseModel):
+  user_id:str

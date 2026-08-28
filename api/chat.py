@@ -1,33 +1,24 @@
 from fastapi import APIRouter,Request,Depends
-from models.chat import ChatRequest,ChatResponse
-from agents.service import AgentService
-from database.dependencies import get_db_session
-from typing import Annotated
-from sqlalchemy.ext.asyncio import AsyncSession
-
+from models.conversation import ChatResponse,ChatRequest
+from database.dependencies import DbSession
+from agents.dependencies import AgentServiceDep
+from repositories.conversation import ConversationRepository
+from sqlalchemy import text
 router=APIRouter(
   prefix='/api',
   tags=['chat']
 )
  
-@router.get('/test-db')
-async def test_database(
-    session:Annotated[
-      AsyncSession,
-      Depends(get_db_session)
-    ]
-):
-  result=await session.execute(
-    "SELECT 1"
-  )
-  return {
-    "database":"connected"
-  }
+ 
 
 @router.post('/chat',response_model=ChatResponse)
-async def create_chat(request:Request,body:ChatRequest,session:Annotated[AsyncSession,Depends(get_db_session)]):
-  agent_service=request.app.state.agent_service
-  answer=await agent_service.chat(body.message,body.thread_id,session=session)
+async def create_chat(body:ChatRequest,agent_service:AgentServiceDep,session:DbSession):
+  print(body)
+  repo=ConversationRepository(session=session)
+  conversation=await repo.get_by_id(conversation_id=body.conversation_id,user_id=body.user_id)
+  if not conversation:
+    raise RuntimeError("Invalid conversation id")
+  answer=await agent_service.chat(body.message,conversation.thread_id)
   return ChatResponse(
     message=answer
   )

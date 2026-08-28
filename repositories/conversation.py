@@ -9,7 +9,7 @@ from models.conversation import Conversation
 
 class ConversationRepository:
 
-  def __int__(self,session:AsyncSession):
+  def __init__(self,session:AsyncSession):
     self.session=session
 
   async def create(
